@@ -33,11 +33,11 @@ def processing_list(decisions, df):
     materials = list(df.material_in.unique())
     materials += [x for x in df.material_out.unique() if x not in materials]
     
-    cuttings = list(df.procnr.unique())
+    processes = list(df.procnr.unique())
     
     g = nx.DiGraph()
     g.add_nodes_from(materials, n=0, a=1.0)
-    for cc in cuttings:
+    for cc in processes:
         g.add_node(cc, a=0.0)
     for ii,row in df.iterrows():
         g.add_edge(row.material_in, row.procnr)
@@ -53,13 +53,13 @@ def processing_list(decisions, df):
         successors[edge_in].append(edge_out)
         
     for e_in,e_out in g.edges():
-        if e_in in cuttings:
+        if e_in in processes:
             g.nodes[e_in]['a'] = actions[action_maps[e_in]]
             
     for node in g.nodes():
         if node in df.material_out.unique():
-            cut_input = sum([g.nodes[x]['a']*g.nodes[predecessors[x][0]]['a'] for x in predecessors[node]])
-            g.nodes[node]['a'] = cut_input
+            proc_input = sum([g.nodes[x]['a']*g.nodes[predecessors[x][0]]['a'] for x in predecessors[node]])
+            g.nodes[node]['a'] = proc_input
             
     for edge_in,list_out in successors.items():
         if edge_in in materials:
@@ -95,9 +95,9 @@ agent_names = ['x', 'y']
     
 class multiagent_public(MultiAgentEnv):
     """
-    A simple environment that has 1 farm, 1 slaughter, 3 cutts, 3 packs and 1 market, w/o wasting.
+    A simple environment that has 1 supplier, 1 pre-production, 3 products and 1 market, w/o wasting.
     :param config: Dict that containts following keys:
-                   - demand_predicted: Nortura's prediction
+                   - demand_predicted: prediction
                    - demand_realized: what actually happened
                    - supply: based on the predicted demand
                    - prod_price: product prices
@@ -136,7 +136,6 @@ class multiagent_public(MultiAgentEnv):
         self.graph = env0_graph_lin()
         
         # ENVIRONMENT PARAMETERS
-#         self._agent_ids = set(["cut_Haerland", "plant_Haerland"])
         self._agent_ids = set(agent_names)
         
         # action space
@@ -215,7 +214,7 @@ class multiagent_public(MultiAgentEnv):
                 self.graph.nodes[node_from]['stock'][101] -= newly_produced
 
             elif node_to.startswith('y'):           
-                # cutting list production
+                # processing list for production
                 edge_production = processing_list(actions[node_to], df)
 
                 # performing production over input
